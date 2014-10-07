@@ -55,7 +55,13 @@ handle_event({log, Level, {Date, Time}, [LevelStr, Location, Message]},
 handle_event({log, Message}, #state{level=Level} = State) ->
     case lager_util:is_loggable(Message, Level, State#state.id) of
         true ->
-            io:format("Log2: ~p~n", [{log, Message}]),
+            M = lager_msg:metadata(Message),
+            case {v(file,M), v(line, M)} of
+                {undefined, _} -> ok;
+                {_, undefined} -> ok;
+                {File, Line} ->
+                    io:format("Log2(~s:~p): ~p~n",
+                              [File, Line, {log, Message}]),
             {ok, State};
         false ->
             {ok, State}
@@ -75,3 +81,6 @@ terminate(_Reason, _State) ->
 %% @private
 code_change(_OldVsn, State, _Extra) ->
     {ok, State}.
+
+v(K, L) ->
+    proplists:get_value(K, L).
