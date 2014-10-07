@@ -1,0 +1,14 @@
+{application, lager_watchdog,
+ [
+  {description, "An Erlang lager_watchdog library"},
+  {vsn, "1"},
+  {modules, [
+             lager_watchdog
+            ]},
+  {registered, []},
+  {applications, [
+                  kernel,
+                  stdlib
+                 ]},
+  {env, []}
+ ]}.
