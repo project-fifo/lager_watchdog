@@ -61,7 +61,8 @@ handle_event({log, Message}, #state{level=Level} = State) ->
                 {_, undefined} -> ok;
                 {File, Line} ->
                     io:format("Log2(~s:~p): ~p~n",
-                              [File, Line, {log, Message}]),
+                              [File, Line, {log, Message}])
+            end,
             {ok, State};
         false ->
             {ok, State}
