@@ -101,7 +101,7 @@ handle_cast({log, Msg}, State) ->
     {noreply, send(Msg, State)};
 
 handle_cast({log, File, Line, Msg}, State) ->
-    {noreply, send({File, Line, Msg}, State)};
+    {noreply, send({flm, File, Line, Msg}, State)};
 
 handle_cast(_Msg, State) ->
     {noreply, State}.
@@ -169,6 +169,8 @@ send(Raw, State = #state{socket = Sock}) ->
             State
     end.
 
+prettyfy_msg({flm, File, Line, Message}) ->
+    {ok, {msg, Message, {fl, {File, Line}}}};
 
 prettyfy_msg({error, [_Pid, _Sig, _State, Cause]}) ->
     prettify_cause(Cause);
