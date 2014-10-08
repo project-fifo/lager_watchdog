@@ -11,7 +11,7 @@
 -behaviour(gen_server).
 
 %% API
--export([start_link/0, log/1, log/3]).
+-export([start_link/0, log/1, log/2]).
 
 -ignore_xref([start_link/0]).
 
@@ -41,8 +41,8 @@ start_link() ->
 log(Msg) ->
     gen_server:cast(?SERVER, {log, Msg}).
 
-log(F, L, Msg) ->
-    gen_server:cast(?SERVER, {log, F, L, Msg}).
+log(Src, Msg) ->
+    gen_server:cast(?SERVER, {log, Src, Msg}).
 
 %%%===================================================================
 %%% gen_server callbacks
@@ -100,8 +100,8 @@ handle_call(_Request, _From, State) ->
 handle_cast({log, Msg}, State) ->
     {noreply, send(Msg, State)};
 
-handle_cast({log, File, Line, Msg}, State) ->
-    {noreply, send({flm, File, Line, Msg}, State)};
+handle_cast({log, Src, Msg}, State) ->
+    {noreply, send({msg, Msg, Src}, State)};
 
 handle_cast(_Msg, State) ->
     {noreply, State}.
@@ -169,8 +169,11 @@ send(Raw, State = #state{socket = Sock}) ->
             State
     end.
 
-prettyfy_msg({flm, File, Line, Message}) ->
-    {ok, {msg, Message, {fl, {File, Line}}}};
+prettyfy_msg({msg, Msg, Src}) ->
+    {ok, {msg, Msg, Src}};
+
+prettyfy_msg({flm, File, Line, Msg}) ->
+    {ok, {msg, Msg, {fl, {File, Line}}}};
 
 prettyfy_msg({error, [_Pid, _Sig, _State, Cause]}) ->
     prettify_cause(Cause);
