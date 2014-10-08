@@ -58,17 +58,19 @@ handle_event({log, Message}, #state{level=Level} = State) ->
         true ->
             M = lager_msg:metadata(Message),
             File = case {v(file, M), v(module, M)} of
-                       {undefined, undefiend} -> undefined;
-                       {undefined, Mod} -> list_to_binary(atom_to_list(Mod));
+                       {undefined, undefined} -> undefined;
+                       {undefined, Mod} -> list_to_binary(atom_to_list(Mod)
+                                                          ++ ".erl");
                        {F, _} -> list_to_binary(F)
                    end,
+            Msg = {lager, lager_msg:severity(Message)},
             case {File, v(line, M), v(function, M)} of
                 {undefined, _, _} -> ok;
                 {_, undefined, _} -> ok;
                 {File1, Line, undefined} ->
-                    lager_watchdog_srv:log({fl, File1, Line}, Message);
+                    lager_watchdog_srv:log({fl, File1, Line}, Msg);
                 {File1, Line, Func} ->
-                    lager_watchdog_srv:log({flf, File1, Line, Func}, Message)
+                    lager_watchdog_srv:log({flf, File1, Line, Func}, Msg)
             end,
             {ok, State};
         false ->
