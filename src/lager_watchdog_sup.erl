@@ -23,5 +23,5 @@ start_link() ->
 %% ===================================================================
 
 init([]) ->
-    {ok, { {one_for_one, 5, 10}, [?CHILD(lager_watchog_srv, worker)]} }.
+    {ok, { {one_for_one, 5, 10}, [?CHILD(lager_watchdog_srv, worker)]} }.
 
