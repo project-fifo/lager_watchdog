@@ -57,11 +57,18 @@ handle_event({log, Message}, #state{level=Level} = State) ->
     case lager_util:is_loggable(Message, Level, State#state.id) of
         true ->
             M = lager_msg:metadata(Message),
-            case {v(file,M), v(line, M)} of
-                {undefined, _} -> ok;
-                {_, undefined} -> ok;
-                {File, Line} ->
-                    lager_watchdog_srv:log(File, Line, Message)
+            File = case {v(file, M), v(module, M)} of
+                       {undefined, undefiend} -> undefined;
+                       {undefined, Mod} -> list_to_binary(atom_to_list(Mod));
+                       {F, _} -> list_to_binary(F)
+                   end,
+            case {File, v(line, M), v(function, M)} of
+                {undefined, _, _} -> ok;
+                {_, undefined, _} -> ok;
+                {File1, Line, undefined} ->
+                    lager_watchdog_srv:log({fl, File1, Line}, Message);
+                {File1, Line, Func} ->
+                    lager_watchdog_srv:log({flf, File1, Line, Func}, Message)
             end,
             {ok, State};
         false ->
@@ -83,5 +90,11 @@ terminate(_Reason, _State) ->
 code_change(_OldVsn, State, _Extra) ->
     {ok, State}.
 
-v(K, L) ->
-    proplists:get_value(K, L).
+v(Key, List) ->
+    v(Key, List, undefined).
+
+v(Key, List, Default) ->
+    case lists:keyfind(Key, 1, List) of
+        false -> Default;
+        {Key, Value} -> Value
+    end.
