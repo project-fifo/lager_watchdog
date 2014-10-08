@@ -18,12 +18,15 @@
 
 %% @private
 init([ClusterID, System, Level, Servers]) ->
+    C = list_to_binary(ClusterID),
+    S = list_to_binary(System),
+    N = list_to_binary(atom_to_list(node())),
     State = #state{
                id = {?MODULE, {ClusterID, System}},
                level = lager_util:config_to_mask(Level),
-               cluster_id = ClusterID,
-               system = System,
-               prefix = {ClusterID, System},
+               cluster_id = C,
+               system = S,
+               prefix = {C, S, N},
                servers = Servers},
     {ok, State}.
 
@@ -35,8 +38,8 @@ handle_call(get_loglevel, #state{level=Level} = State) ->
 handle_call(get_servers, #state{servers=Servers} = State) ->
     {ok, Servers, State};
 
-handle_call(get_id, #state{cluster_id=ClusterID, system=System} = State) ->
-    {ok, {ClusterID, System, node()}, State};
+handle_call(get_id, #state{prefix = ID} = State) ->
+    {ok, ID, State};
 
 handle_call({set_loglevel, Level}, State) ->
     try lager_util:config_to_mask(Level) of
