@@ -21,7 +21,7 @@
 
 -define(SERVER, ?MODULE).
 
--record(state, {servers, socket}).
+-record(state, {servers, socket, id}).
 
 %%%===================================================================
 %%% API
@@ -61,10 +61,11 @@ log(Src, Msg) ->
 %%--------------------------------------------------------------------
 init([]) ->
     {Addr, Port} = gen_event:call(lager_event, lager_watchdog, get_servers),
+    ID = gen_event:call(lager_event, lager_watchdog, get_id),
     S0 = #state{servers = [{Addr, Port}]},
     case gen_tcp:connect(Addr, Port, [binary, {packet, 4}]) of
         {ok, Sock} ->
-            {ok, S0#state{socket = Sock}};
+            {ok, S0#state{socket = Sock, id=ID}};
         _ ->
             {ok, S0}
     end.
@@ -156,10 +157,10 @@ send(M, State = #state{socket = undefined, servers = [{Addr, Port} | _]}) ->
             State
     end;
 
-send(Raw, State = #state{socket = Sock}) ->
+send(Raw, State = #state{socket = Sock, id=ID}) ->
     case prettyfy_msg(Raw) of
         {ok, M} ->
-            case gen_tcp:send(Sock, term_to_binary(M)) of
+            case gen_tcp:send(Sock, term_to_binary({ID, M})) of
                 ok ->
                     State;
                 _ ->
