@@ -279,7 +279,7 @@ prettify_cause({{Reason, [MFAF | _]}, _}) ->
     {ok, {Reason, mfaf(MFAF)}};
 
 prettify_cause({noproc, Src = {_M, _F, [P | _]}}) ->
-    {ok, {noproc, P, prettify_src(Src)}};
+    {ok, {{noproc, P}, prettify_src(Src)}};
 
 prettify_cause({Reason, Src}) when is_atom(Reason) ->
     {ok, {Reason, prettify_src(Src)}};
