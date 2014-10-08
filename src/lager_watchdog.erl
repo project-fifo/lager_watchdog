@@ -35,6 +35,9 @@ handle_call(get_loglevel, #state{level=Level} = State) ->
 handle_call(get_servers, #state{servers=Servers} = State) ->
     {ok, Servers, State};
 
+handle_call(get_id, #state{cluster_id=ClusterID, system=System} = State) ->
+    {ok, {ClusterID, System}, State};
+
 handle_call({set_loglevel, Level}, State) ->
     try lager_util:config_to_mask(Level) of
         Lvl ->
