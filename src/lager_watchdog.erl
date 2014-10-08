@@ -11,9 +11,7 @@
           system,
           level,
           prefix,
-          servers,
-          bad_servers = [],
-          socket
+          servers
          }).
 
 -include_lib("lager/include/lager.hrl").
@@ -34,6 +32,9 @@ init([ClusterID, System, Level, Servers]) ->
 handle_call(get_loglevel, #state{level=Level} = State) ->
     {ok, Level, State};
 
+handle_call(get_servers, #state{servers=Servers} = State) ->
+    {ok, Servers, State};
+
 handle_call({set_loglevel, Level}, State) ->
     try lager_util:config_to_mask(Level) of
         Lvl ->
@@ -49,7 +50,7 @@ handle_call(_Request, State) ->
 %% @private
 handle_event({log, Level, {Date, Time}, [LevelStr, Location, Message]},
              #state{level=LogLevel} = State) when Level =< LogLevel ->
-    io:format("Log1: ~p~n", [{log, Level, {Date, Time}, [LevelStr, Location, Message]}]),
+    lager_watchdog_srv:log([{log, Level, {Date, Time}, [LevelStr, Location, Message]}]),
     {ok, State};
 
 handle_event({log, Message}, #state{level=Level} = State) ->
@@ -60,8 +61,7 @@ handle_event({log, Message}, #state{level=Level} = State) ->
                 {undefined, _} -> ok;
                 {_, undefined} -> ok;
                 {File, Line} ->
-                    io:format("Log2(~s:~p): ~p~n",
-                              [File, Line, {log, Message}])
+                    lager_watchdog_srv:log(File, Line, Message)
             end,
             {ok, State};
         false ->
