@@ -170,6 +170,9 @@ send(Raw, State = #state{socket = Sock, id=ID}) ->
             State
     end.
 
+prettyfy_msg({msg, {lager, Svrt}, Src}) ->
+    {ok, {{lager, Svrt}, Src}};
+
 prettyfy_msg({msg, Msg, Src}) ->
     {ok, {msg, Msg, Src}};
 
