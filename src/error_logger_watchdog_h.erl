@@ -133,7 +133,6 @@ discard_messages(Second, Count) ->
 log_event(Event, State) ->
     case Event of
         {error, _GL, {_Pid, _Fmt, Args}} ->
-
             ?CRASH_LOG({error, Args});
         {error_report, _GL, {_Pid, std_error, D}} ->
             ?CRASH_LOG({error_report1, D});

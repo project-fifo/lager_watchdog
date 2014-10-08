@@ -19,7 +19,7 @@
 
 -define(SERVER, ?MODULE).
 
--record(state, {servers}).
+-record(state, {servers, socket}).
 
 %%%===================================================================
 %%% API
@@ -38,6 +38,7 @@ start_link() ->
 
 log(Msg) ->
     gen_server:cast(?SERVER, {log, Msg}).
+
 log(F, L, Msg) ->
     gen_server:cast(?SERVER, {log, F, L, Msg}).
 
@@ -57,8 +58,14 @@ log(F, L, Msg) ->
 %% @end
 %%--------------------------------------------------------------------
 init([]) ->
-    Servers = gen_event:call(lager_event, lager_watchdog, get_servers),
-    {ok, #state{servers = Servers}}.
+    {Addr, Port} = gen_event:call(lager_event, lager_watchdog, get_servers),
+    S0 = #state{servers = [{Addr, Port}]},
+    case gen_tcp:connect(Addr, Port, [binary, {packet, 4}]) of
+        {ok, Sock} ->
+            {ok, S0#state{socket = Sock}};
+        _ ->
+            {ok, S0}
+    end.
 
 %%--------------------------------------------------------------------
 %% @private
@@ -89,12 +96,10 @@ handle_call(_Request, _From, State) ->
 %% @end
 %%--------------------------------------------------------------------
 handle_cast({log, Msg}, State) ->
-    io:format("Log1: ~p~n", [Msg]),
-    {noreply, State};
+    {noreply, send(Msg, State)};
 
 handle_cast({log, File, Line, Msg}, State) ->
-    io:format("Log2(~s:~p): ~p~n", [File, Line, Msg]),
-    {noreply, State};
+    {noreply, send({File, Line, Msg}, State)};
 
 handle_cast(_Msg, State) ->
     {noreply, State}.
@@ -140,3 +145,20 @@ code_change(_OldVsn, State, _Extra) ->
 %%%===================================================================
 %%% Internal functions
 %%%===================================================================
+
+send(M, State = #state{socket = undefined, servers = [{Addr, Port} | _]}) ->
+    case gen_tcp:connect(Addr, Port, [binary, {packet, 4}], 100) of
+        {ok, Sock} ->
+            send(M, State#state{socket = Sock});
+        _ ->
+            State
+    end;
+
+send(M, State = #state{socket = Sock}) ->
+    case gen_tcp:send(Sock, term_to_binary(M)) of
+        ok ->
+            State;
+        _ ->
+            State#state{socket = undefined}
+    end.
+
