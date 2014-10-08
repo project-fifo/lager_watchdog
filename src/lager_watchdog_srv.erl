@@ -13,6 +13,8 @@
 %% API
 -export([start_link/0, log/1, log/3]).
 
+-ignore_xref([start_link/0]).
+
 %% gen_server callbacks
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2,
          terminate/2, code_change/3]).
@@ -154,11 +156,149 @@ send(M, State = #state{socket = undefined, servers = [{Addr, Port} | _]}) ->
             State
     end;
 
-send(M, State = #state{socket = Sock}) ->
-    case gen_tcp:send(Sock, term_to_binary(M)) of
-        ok ->
-            State;
+send(Raw, State = #state{socket = Sock}) ->
+    case prettyfy_msg(Raw) of
+        {ok, M} ->
+            case gen_tcp:send(Sock, term_to_binary(M)) of
+                ok ->
+                    State;
+                _ ->
+                    State#state{socket = undefined}
+            end;
         _ ->
-            State#state{socket = undefined}
+            State
     end.
 
+
+prettyfy_msg({error, [_Pid, _Sig, _State, Cause]}) ->
+    prettify_cause(Cause);
+
+prettyfy_msg({error_report2, D}) ->
+    case prettify_cause(get_value(reason, D)) of
+        {ok, R} ->
+            {ok, R};
+        _ ->
+            %% {error_report2,
+            %%  [{supervisor,{<10225.190.0>,poolboy_sup}},
+            %%   {errorContext,shutdown_error},
+            %%   {reason,shutdown},
+            %%   {offender,
+            %%    [{nb_children,3},
+            %%     {name,fifo_s3_download_worker},
+            %%     {mfargs,{fifo_s3_download_worker,start_link,[[]]}},
+            %%     {restart_type,temporary},
+            %%     {shutdown,5000},
+            %%     {child_type,worker}]}]}
+            no_log
+    end;
+
+prettyfy_msg({error_report3, M, _}) ->
+    case get_value(error_info, M) of
+        undefined ->
+            lager:warning("[error_report3] No error_info for: ~p", M),
+            no_log;
+        Info ->
+            case prettify_info(Info) of
+                {ok, R} ->
+                    {ok, R};
+                _ ->
+                    no_log
+            end
+    end;
+
+prettyfy_msg(M) ->
+    lager:warning("[no_log] can't do anything with: ~p", M),
+    no_log.
+
+
+
+
+%% Location:
+%% [{gen_fsm,terminate,7,[{file,"gen_fsm.erl"},{line,600}]},
+%%   {proc_lib,init_p_do_apply,3,
+%%    [{file,"proc_lib.erl"},{line,239}]}]
+
+%% Cause:
+%% {
+%%   {{badrecord,door},
+%%    [{ezdoor_server,handle_call,3,
+%%      [{file,"src/ezdoor_server.erl"},{line,113}]},
+%%     {gen_server,handle_msg,5,
+%%      [{file,"gen_server.erl"},{line,585}]},
+%%     {proc_lib,init_p_do_apply,3,
+%%      [{file,"proc_lib.erl"},{line,239}]}]},
+%%   {gen_server,call,
+%%    [ezdoor_server,{remove,#Ref<10225.0.0.1100>}]}
+%% }
+
+%% {exit,
+%%  {noproc,
+%%   {gen_server,call,
+%%    [pooler_sup,
+%%     {terminate_child,
+%%      'pooler_snarl@192.168.221.201:4200_pool_sup'},
+%%     infinity]}},
+%%  [{gen_server,terminate,6,
+%%    [{file,"gen_server.erl"},{line,722}]},
+%%   {proc_lib,init_p_do_apply,3,
+%%    [{file,"proc_lib.erl"},{line,239}]}]}
+
+
+%% Call: 
+%% {gen_server,call,
+%%  [pooler_sup,
+%%   {terminate_child,
+%%    'pooler_snarl@192.168.221.201:4200_pool_sup'},
+%%   infinity]}
+prettify_info({exit, Cause, Location}) ->
+    case prettify_cause(Cause) of
+        {ok, R} ->
+            {ok, R};
+        _ ->
+            case Location of
+                [MFAF | _] ->
+                    {ok, {exit, mfaf(MFAF)}};
+                _ ->
+                    no_log
+            end
+    end;
+
+prettify_info(I) ->
+    lager:warning("unknown info: ~p", [I]),
+    no_log.
+
+%% Stack: 
+%% [{ezdoor_server,handle_call,3,
+%%      [{file,"src/ezdoor_server.erl"},{line,113}]},
+%%     {gen_server,handle_msg,5,
+%%      [{file,"gen_server.erl"},{line,585}]},
+%%     {proc_lib,init_p_do_apply,3,
+%%      [{file,"proc_lib.erl"},{line,239}]}]
+
+prettify_cause({{Reason, [MFAF | _]}, _}) ->
+    {ok, {Reason, mfaf(MFAF)}};
+
+prettify_cause({Reason, Src}) when is_atom(Reason) ->
+    {ok, {Reason, prettify_src(Src)}};
+
+prettify_cause(S) ->
+    lager:warning("unknown source: ~p", [S]),
+    no_log.
+
+prettify_src({M, F, A}) ->
+    {mfa, {M, F, length(A)}}.
+
+mfaf({M, F, A, D}) ->
+    File = get_value(file, D),
+    Line = get_value(line, D),
+    {mfaf, {M, F, A, {File, Line}}}.
+
+
+get_value(Key, List) ->
+    get_value(Key, List, undefined).
+
+get_value(Key, List, Default) ->
+    case lists:keyfind(Key, 1, List) of
+        false -> Default;
+        {Key, Value} -> Value
+    end.
