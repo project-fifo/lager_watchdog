@@ -301,12 +301,12 @@ prettify_cause(S) ->
     no_log.
 
 prettify_src({M, F, A}) ->
-    {mfa, {M, F, length(A)}}.
+    {mfa, {a2b(M), a2b(F), length(A)}}.
 
 mfaf({M, F, A, D}) ->
     File = get_value(file, D),
     Line = get_value(line, D),
-    {mfaf, {M, F, A, {File, Line}}}.
+    {mfaf, {a2b(M), a2b(F), A, {l2b(File), Line}}}.
 
 
 get_value(Key, List) ->
@@ -317,3 +317,10 @@ get_value(Key, List, Default) ->
         false -> Default;
         {Key, Value} -> Value
     end.
+
+
+a2b(A) ->
+    l2b(atom_to_list(A)).
+
+l2b(L) ->
+    list_to_binary(L).
