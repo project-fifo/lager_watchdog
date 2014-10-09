@@ -176,6 +176,9 @@ prettyfy_msg({msg, {lager, Svrt}, Src}) ->
 prettyfy_msg({msg, Msg, Src}) ->
     {ok, {msg, Msg, Src}};
 
+prettyfy_msg({flm, File, Line, Msg}) when is_list(File) ->
+    {ok, {msg, Msg, {fl, {list_to_binary(File), Line}}}};
+
 prettyfy_msg({flm, File, Line, Msg}) ->
     {ok, {msg, Msg, {fl, {File, Line}}}};
 
