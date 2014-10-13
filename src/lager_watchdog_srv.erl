@@ -64,8 +64,8 @@ set_version(Vsn) when is_binary(Vsn) ->
 %%--------------------------------------------------------------------
 init([]) ->
     case gen_event:call(lager_event, lager_watchdog, get_servers) of
-        {error,bad_module} ->
-            {stop, normal};
+        {error, bad_module} ->
+            {ok, #state{socket = inactive}};
         [{Addr, Port} | Srvs] ->
             ID = gen_event:call(lager_event, lager_watchdog, get_id),
             S0 = #state{servers = Srvs, badservers = [{Addr, Port}]},
@@ -105,6 +105,9 @@ handle_call(_Request, _From, State) ->
 %%                                  {stop, Reason, State}
 %% @end
 %%--------------------------------------------------------------------
+handle_cast(_, State = #state{socket = inactive}) ->
+    {noreply, State};
+
 handle_cast({vsn, Vsn}, State) ->
     {noreply, State#state{version = Vsn}};
 
