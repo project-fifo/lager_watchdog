@@ -63,14 +63,18 @@ set_version(Vsn) when is_binary(Vsn) ->
 %% @end
 %%--------------------------------------------------------------------
 init([]) ->
-    [{Addr, Port} | Srvs] = gen_event:call(lager_event, lager_watchdog, get_servers),
-    ID = gen_event:call(lager_event, lager_watchdog, get_id),
-    S0 = #state{servers = Srvs, badservers = [{Addr, Port}]},
-    case gen_tcp:connect(Addr, Port, [binary, {packet, 4}]) of
-        {ok, Sock} ->
-            {ok, S0#state{socket = Sock, id=ID}};
-        _ ->
-            {ok, S0}
+    case gen_event:call(lager_event, lager_watchdog, get_servers) of
+        {error,bad_module} ->
+            {stop, normal};
+        [{Addr, Port} | Srvs] ->
+            ID = gen_event:call(lager_event, lager_watchdog, get_id),
+            S0 = #state{servers = Srvs, badservers = [{Addr, Port}]},
+            case gen_tcp:connect(Addr, Port, [binary, {packet, 4}]) of
+                {ok, Sock} ->
+                    {ok, S0#state{socket = Sock, id=ID}};
+                _ ->
+                    {ok, S0}
+            end
     end.
 
 %%--------------------------------------------------------------------
