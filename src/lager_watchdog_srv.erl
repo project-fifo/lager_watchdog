@@ -11,9 +11,9 @@
 -behaviour(gen_server).
 
 %% API
--export([start_link/0, log/1, log/2]).
+-export([start_link/0, log/1, log/2, set_version/1]).
 
--ignore_xref([start_link/0]).
+-ignore_xref([start_link/0, set_version/1]).
 
 %% gen_server callbacks
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2,
@@ -21,7 +21,7 @@
 
 -define(SERVER, ?MODULE).
 
--record(state, {servers, socket, id}).
+-record(state, {servers, badservers = [], socket, id, version = <<"unknown">>}).
 
 %%%===================================================================
 %%% API
@@ -44,6 +44,9 @@ log(Msg) ->
 log(Src, Msg) ->
     gen_server:cast(?SERVER, {log, Src, Msg}).
 
+set_version(Vsn) when is_binary(Vsn) ->
+    gen_server:cast(?SERVER, {vsn, Vsn}).
+
 %%%===================================================================
 %%% gen_server callbacks
 %%%===================================================================
@@ -60,9 +63,9 @@ log(Src, Msg) ->
 %% @end
 %%--------------------------------------------------------------------
 init([]) ->
-    {Addr, Port} = gen_event:call(lager_event, lager_watchdog, get_servers),
+    [{Addr, Port} | Srvs] = gen_event:call(lager_event, lager_watchdog, get_servers),
     ID = gen_event:call(lager_event, lager_watchdog, get_id),
-    S0 = #state{servers = [{Addr, Port}]},
+    S0 = #state{servers = Srvs, badservers = [{Addr, Port}]},
     case gen_tcp:connect(Addr, Port, [binary, {packet, 4}]) of
         {ok, Sock} ->
             {ok, S0#state{socket = Sock, id=ID}};
@@ -98,6 +101,9 @@ handle_call(_Request, _From, State) ->
 %%                                  {stop, Reason, State}
 %% @end
 %%--------------------------------------------------------------------
+handle_cast({vsn, Vsn}, State) ->
+    {noreply, State#state{version = Vsn}};
+
 handle_cast({log, Msg}, State) ->
     {noreply, send(Msg, State)};
 
@@ -149,18 +155,23 @@ code_change(_OldVsn, State, _Extra) ->
 %%% Internal functions
 %%%===================================================================
 
-send(M, State = #state{socket = undefined, servers = [{Addr, Port} | _]}) ->
+send(M, State = #state{servers = [], badservers = Ss}) ->
+    send(M, State#state{servers = lists:reverse(Ss), badservers = []});
+
+send(M, State = #state{socket = undefined, servers = [{Addr, Port} | R],
+                       badservers = Ss}) ->
     case gen_tcp:connect(Addr, Port, [binary, {packet, 4}], 100) of
         {ok, Sock} ->
-            send(M, State#state{socket = Sock});
+            send(M, State#state{socket = Sock, servers = R,
+                                badservers=[{Addr, Port} | Ss]});
         _ ->
             State
     end;
 
-send(Raw, State = #state{socket = Sock, id=ID}) ->
+send(Raw, State = #state{socket = Sock, id=ID, version = Vsn}) ->
     case prettyfy_msg(Raw) of
         {ok, M} ->
-            case gen_tcp:send(Sock, term_to_binary({ID, M})) of
+            case gen_tcp:send(Sock, term_to_binary({ID, Vsn, M})) of
                 ok ->
                     State;
                 _ ->
