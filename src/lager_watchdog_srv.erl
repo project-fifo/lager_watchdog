@@ -12,6 +12,7 @@
 
 %% API
 -export([start_link/0, log/1, log/2, set_version/1]).
+-export([alert/3, raise/2]).
 
 -ignore_xref([start_link/0, set_version/1]).
 
@@ -47,6 +48,11 @@ log(Src, Msg) ->
 set_version(Vsn) when is_binary(Vsn) ->
     gen_server:cast(?SERVER, {vsn, Vsn}).
 
+alert(Type, Alert, Severity) ->
+    gen_server:cast(?SERVER, {alert, Type, Alert, Severity}).
+
+clear(Type, Alert) ->
+    gen_server:cast(?SERVER, {clear, Type, Alert}).
 %%%===================================================================
 %%% gen_server callbacks
 %%%===================================================================
@@ -116,6 +122,12 @@ handle_cast({log, Msg}, State) ->
 
 handle_cast({log, Src, Msg}, State) ->
     {noreply, send({msg, Msg, Src}, State)};
+
+handle_cast({raise, Type, Alert, Severity}, State) ->
+    {noreply, send({raise, Type, Alert, Severity}, State)};
+
+handle_cast({clear, Type, Alert}, State) ->
+    {noreply, send({clear, Type, Alert}, State)};
 
 handle_cast(_Msg, State) ->
     {noreply, State}.
@@ -187,6 +199,12 @@ send(Raw, State = #state{socket = Sock, id=ID, version = Vsn}) ->
         _ ->
             State
     end.
+
+prettyfy_msg({raise, Type, Alert, Severity}) ->
+    {ok, {raise, Type, Alert, Severity}};
+
+prettyfy_msg({clear, Type, Alert}) ->
+    {ok, {clear, Type, Alert}};
 
 prettyfy_msg({msg, {lager, Svrt}, Src}) ->
     {ok, {{lager, Svrt}, Src}};
