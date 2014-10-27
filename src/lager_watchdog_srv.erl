@@ -12,7 +12,7 @@
 
 %% API
 -export([start_link/0, log/1, log/2, set_version/1]).
--export([alert/3, raise/2]).
+-export([raise/3, clear/2]).
 
 -ignore_xref([start_link/0, set_version/1]).
 
@@ -48,7 +48,7 @@ log(Src, Msg) ->
 set_version(Vsn) when is_binary(Vsn) ->
     gen_server:cast(?SERVER, {vsn, Vsn}).
 
-alert(Type, Alert, Severity) ->
+raise(Type, Alert, Severity) ->
     gen_server:cast(?SERVER, {alert, Type, Alert, Severity}).
 
 clear(Type, Alert) ->
