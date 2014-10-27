@@ -49,7 +49,7 @@ set_version(Vsn) when is_binary(Vsn) ->
     gen_server:cast(?SERVER, {vsn, Vsn}).
 
 raise(Type, Alert, Severity) ->
-    gen_server:cast(?SERVER, {alert, Type, Alert, Severity}).
+    gen_server:cast(?SERVER, {raise, Type, Alert, Severity}).
 
 clear(Type, Alert) ->
     gen_server:cast(?SERVER, {clear, Type, Alert}).
