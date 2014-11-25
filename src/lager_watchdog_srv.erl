@@ -259,8 +259,6 @@ prettyfy_msg(M) ->
     no_log.
 
 
-
-
 %% Location:
 %% [{gen_fsm,terminate,7,[{file,"gen_fsm.erl"},{line,600}]},
 %%   {proc_lib,init_p_do_apply,3,
@@ -328,6 +326,9 @@ prettify_cause({{Reason, [MFAF | _]}, _}) ->
 
 prettify_cause({noproc, Src = {_M, _F, [P | _]}}) ->
     {ok, {{noproc, P}, prettify_src(Src)}};
+
+prettify_cause({{badmatch, _}, Src}) ->
+    {ok, {badmatch, prettify_src(Src)}};
 
 prettify_cause({Reason, Src}) when is_atom(Reason) ->
     {ok, {Reason, prettify_src(Src)}};
