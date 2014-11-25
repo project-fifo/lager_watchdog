@@ -327,8 +327,8 @@ prettify_cause({{Reason, [MFAF | _]}, _}) ->
 prettify_cause({noproc, Src = {_M, _F, [P | _]}}) ->
     {ok, {{noproc, P}, prettify_src(Src)}};
 
-prettify_cause({{badmatch, _}, Src}) ->
-    {ok, {badmatch, prettify_src(Src)}};
+prettify_cause({{badmatch, _}, [MFAF | _]}) ->
+    {ok, {badmatch, mfaf(MFAF)}};
 
 prettify_cause({Reason, Src}) when is_atom(Reason) ->
     {ok, {Reason, prettify_src(Src)}};
