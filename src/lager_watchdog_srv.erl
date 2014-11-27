@@ -333,8 +333,13 @@ prettify_cause({{badmatch, _}, [MFAF | _]}) ->
 prettify_cause({Reason, Src}) when is_atom(Reason) ->
     {ok, {Reason, prettify_src(Src)}};
 
+prettify_cause({Data, _}) when is_list(Data)->
+    Reason = get_value(reason, Data),
+    Stack = get_value(stacktrace, Data),
+    prettify_cause({Reason, Stack});
+
 prettify_cause(S) ->
-    lager:warning("unknown source: ~p", [S]),
+    lager:warning("unknown cause: ~p", [S]),
     no_log.
 
 prettify_src({M, F, A}) ->
