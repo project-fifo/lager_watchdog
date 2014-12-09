@@ -75,7 +75,7 @@ init([]) ->
         [{Addr, Port} | Srvs] ->
             ID = gen_event:call(lager_event, lager_watchdog, get_id),
             S0 = #state{servers = Srvs, badservers = [{Addr, Port}]},
-            erlang:send_after(self(), ?PING_TIME, ping),
+            erlang:send_after(?PING_TIME, self(), ping),
             case gen_tcp:connect(Addr, Port, [binary, {packet, 4}]) of
                 {ok, Sock} ->
                     {ok, S0#state{socket = Sock, id=ID}};
@@ -144,7 +144,7 @@ handle_cast(_Msg, State) ->
 %% @end
 %%--------------------------------------------------------------------
 handle_info(ping, State) ->
-    erlang:send_after(self(), ?PING_TIME, ping),
+    erlang:send_after(?PING_TIME, self(), ping),
     {noreply, send(ping, State)};
 
 handle_info(_Info, State) ->
