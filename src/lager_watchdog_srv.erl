@@ -145,7 +145,7 @@ handle_cast(_Msg, State) ->
 %%--------------------------------------------------------------------
 handle_info(ping, State) ->
     erlang:send_after(self(), ?PING_TIME, ping),
-    {noreply, send(ping, State)}.
+    {noreply, send(ping, State)};
 
 handle_info(_Info, State) ->
     {noreply, State}.
