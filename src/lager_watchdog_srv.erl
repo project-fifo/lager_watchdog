@@ -21,7 +21,7 @@
          terminate/2, code_change/3]).
 
 -define(SERVER, ?MODULE).
-
+-define(PING_TIME, 10000). %% This is 10s
 -record(state, {servers, badservers = [], socket, id, version = <<"unknown">>}).
 
 %%%===================================================================
@@ -75,6 +75,7 @@ init([]) ->
         [{Addr, Port} | Srvs] ->
             ID = gen_event:call(lager_event, lager_watchdog, get_id),
             S0 = #state{servers = Srvs, badservers = [{Addr, Port}]},
+            erlang:send_after(self(), ?PING_TIME, ping),
             case gen_tcp:connect(Addr, Port, [binary, {packet, 4}]) of
                 {ok, Sock} ->
                     {ok, S0#state{socket = Sock, id=ID}};
@@ -142,6 +143,10 @@ handle_cast(_Msg, State) ->
 %%                                   {stop, Reason, State}
 %% @end
 %%--------------------------------------------------------------------
+handle_info(ping, State) ->
+    erlang:send_after(self(), ?PING_TIME, ping),
+    {noreply, send(ping, State)}.
+
 handle_info(_Info, State) ->
     {noreply, State}.
 
@@ -199,6 +204,8 @@ send(Raw, State = #state{socket = Sock, id=ID, version = Vsn}) ->
         _ ->
             State
     end.
+prettyfy_msg(ping) ->
+    {ok, ping};
 
 prettyfy_msg({raise, Type, Alert, Severity}) ->
     {ok, {raise, Type, Alert, Severity}};
