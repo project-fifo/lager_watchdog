@@ -350,13 +350,23 @@ prettify_cause(S) ->
     no_log.
 
 prettify_src({M, F, A}) ->
-    {mfa, {a2b(M), a2b(F), length(A)}}.
+    {mfa, {a2b(M), a2b(F), length(A)}};
+
+prettify_src([{_A, _B, _N, _L} = Data | _])
+  when is_atom(_A),
+       is_atom(_B),
+       is_integer(_N),
+       is_list(_L) ->
+    mfaf(Data);
+
+prettify_src([_ | T]) ->
+    prettify_src(T).
+
 
 mfaf({M, F, A, D}) ->
     File = get_value(file, D),
     Line = get_value(line, D),
     {mfaf, {a2b(M), a2b(F), A, {l2b(File), Line}}}.
-
 
 get_value(Key, List) ->
     get_value(Key, List, undefined).
