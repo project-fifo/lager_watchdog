@@ -143,6 +143,10 @@ handle_cast(_Msg, State) ->
 %%                                   {stop, Reason, State}
 %% @end
 %%--------------------------------------------------------------------
+handle_info(ping, State = #state{id = undefined}) ->
+    ID = gen_event:call(lager_event, lager_watchdog, get_id),
+    erlang:send_after(?PING_TIME, self(), ping),
+    {noreply, State#state{id = ID}};
 handle_info(ping, State) ->
     erlang:send_after(?PING_TIME, self(), ping),
     {noreply, send(ping, State)};
