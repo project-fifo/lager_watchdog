@@ -336,13 +336,25 @@ prettify_cause({{Reason, [MFAF | _]}, _}) ->
     {ok, {Reason, mfaf(MFAF)}};
 
 prettify_cause({noproc, Src = {_M, _F, [P | _]}}) ->
-    {ok, {{noproc, P}, prettify_src(Src)}};
+    case prettify_src(Src) of
+        {ok, S} ->
+            {ok, {{noproc, P}, S}};
+        _ ->
+            no_log
+    end;
 
 prettify_cause({{badmatch, _}, [MFAF | _]}) ->
     {ok, {badmatch, mfaf(MFAF)}};
 
-prettify_cause({Reason, Src}) when is_atom(Reason) ->
-    {ok, {Reason, prettify_src(Src)}};
+prettify_cause({Reason, Src}) when
+      is_atom(Reason),
+      Src =/= undefined ->
+    case prettify_src(Src) of
+        {ok, R} ->
+            {ok, {Reason, R}};
+        _ ->
+            no_log
+    end;
 
 prettify_cause({Data, _}) when is_list(Data)->
     Reason = get_value(reason, Data),
@@ -354,17 +366,21 @@ prettify_cause(S) ->
     no_log.
 
 prettify_src({M, F, A}) ->
-    {mfa, {a2b(M), a2b(F), length(A)}};
+    {ok, {mfa, {a2b(M), a2b(F), length(A)}}};
 
 prettify_src([{_A, _B, _N, _L} = Data | _])
   when is_atom(_A),
        is_atom(_B),
        is_integer(_N),
        is_list(_L) ->
-    mfaf(Data);
+    {ok, mfaf(Data)};
 
 prettify_src([_ | T]) ->
-    prettify_src(T).
+    {ok, prettify_src(T)};
+
+prettify_src(I) ->
+    lager:warning("unknown src: ~p", [I]),
+    no_log.
 
 
 mfaf({M, F, A, D}) ->
