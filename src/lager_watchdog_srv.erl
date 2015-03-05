@@ -266,7 +266,7 @@ prettyfy_msg({error_report3, M, _}) ->
     end;
 
 prettyfy_msg(M) ->
-    lager:warning("[no_log] can't do anything with: ~p", M),
+    lager:warning("[no_log] can't do anything with: ~p", [M]),
     no_log.
 
 
@@ -345,6 +345,9 @@ prettify_cause({noproc, Src = {_M, _F, [P | _]}}) ->
 
 prettify_cause({{badmatch, _}, [MFAF | _]}) ->
     {ok, {badmatch, mfaf(MFAF)}};
+
+prettify_cause({{badrecord, _}, [MFAF | _]}) ->
+    {ok, {badrecord, mfaf(MFAF)}};
 
 prettify_cause({Reason, Src}) when
       is_atom(Reason),
