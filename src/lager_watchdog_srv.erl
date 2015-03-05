@@ -208,6 +208,7 @@ send(Raw, State = #state{socket = Sock, id=ID, version = Vsn}) ->
         _ ->
             State
     end.
+
 prettyfy_msg(ping) ->
     {ok, ping};
 
