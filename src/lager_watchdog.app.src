@@ -1,7 +1,7 @@
 {application, lager_watchdog,
  [
-  {description, ""},
-  {vsn, "0.1.8"},
+  {description, "lager provider to send data to watchdog."},
+  {vsn, "0.1.9"},
   {registered, []},
   {applications, [
                   kernel,
@@ -9,5 +9,8 @@
                   stdlib
                  ]},
   {mod, { lager_watchdog_app, []}},
+  {contributors, ["Heinz N. Gies"]},
+  {licenses, ["CDDL"]},
+  {links, [{"Github", "https://github.com/project-fifo/lager_watchdog"}]},
   {env, []}
  ]}.
